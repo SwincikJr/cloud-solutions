@@ -44,7 +44,7 @@ export class Fs extends Storage implements StorageInterface {
         const _path = path.join(options.basePath || this.options.basePath, filePath);
         try {
             if (existsSync(_path)) {
-                const data = await createReadStream(_path);
+                const data = await createReadStream(_path, { start: 0 });
                 if (options.getRawStream) return data;
 
                 const rl = await createInterface({

@@ -1,4 +1,4 @@
-import { ReadStream } from 'fs';
+import { Interface } from 'readline';
 
 export abstract class WriteStream {
     protected lineIndex = 0;
@@ -30,7 +30,7 @@ export abstract class WriteStream {
         return await this.write(lineBreak + content);
     }
 
-    async writeReadStream(readStream: ReadStream, terminate = false) {
+    async writeReadStream(readStream: Interface, terminate = false) {
         for await (const line of readStream) {
             await this.writeLine(line);
         }

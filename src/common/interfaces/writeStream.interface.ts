@@ -1,11 +1,11 @@
-import { ReadStream } from 'fs';
+import { Interface } from 'readline';
 
 export interface WriteStreamInterface {
     getLineIndex();
     getLineNumber();
     isFirstLine();
     writeLine(content: string);
-    writeReadStream(readStream: ReadStream);
+    writeReadStream(readStream: Interface);
     write(content: string);
     end();
 }

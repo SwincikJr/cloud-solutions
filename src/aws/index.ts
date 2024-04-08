@@ -31,6 +31,8 @@ export const providerConfig = async (options: any = {}) => {
     };
     AWS.config.update(_config);
     AWS.config.region = _config.region;
+
+    return _config;
 };
 
 export const libraries = {

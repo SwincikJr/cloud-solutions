@@ -1,8 +1,7 @@
 {
-    "include": [
-        "./src/**/*"
-    ],
+    "include": ["./src/**/*"],
     "compilerOptions": {
+        "target": "es2020",
         "module": "nodenext",
         "allowJs": true,
         "moduleResolution": "nodenext",
@@ -11,7 +10,6 @@
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "allowSyntheticDefaultImports": true,
-        "target": "es2020",
         "sourceMap": true,
         "outDir": "./dist",
         "baseUrl": "./src",
@@ -24,17 +22,10 @@
         "noFallthroughCasesInSwitch": false,
         "esModuleInterop": true,
         "resolveJsonModule": true,
-        "typeRoots": [
-            "./src/@types",
-            "./node_modules/@types"
-        ],
+        "typeRoots": ["./src/@types", "./node_modules/@types"],
         "paths": {
-            "@/*": [
-                "*"
-            ],
-            "@test/*": [
-                "../test/*"
-            ],
+            "@/*": ["*"],
+            "@test/*": ["../test/*"]
         }
     }
 }

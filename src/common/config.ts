@@ -6,15 +6,15 @@ import { SolutionEnum } from './types/solution.enum';
 import { ProviderEnum } from './types/provider.enum';
 
 const adapters: any = {};
-adapters[SolutionEnum.PROVIDERCONFIG] = {};
+adapters[SolutionEnum.CLOUD_PROVIDER] = {};
 adapters[SolutionEnum.SECRETS] = {};
 adapters[SolutionEnum.STORAGE] = {};
 adapters[SolutionEnum.EVENTS] = {};
 
 // AWS
 adapters[ProviderEnum.AWS] = {};
-adapters[SolutionEnum.PROVIDERCONFIG][ProviderEnum.AWS] = Aws.providerConfig;
-adapters[ProviderEnum.AWS][SolutionEnum.PROVIDERCONFIG] = Aws.providerConfig;
+adapters[SolutionEnum.CLOUD_PROVIDER][ProviderEnum.AWS] = Aws.providerConfig;
+adapters[ProviderEnum.AWS][SolutionEnum.CLOUD_PROVIDER] = Aws.providerConfig;
 adapters[SolutionEnum.SECRETS][ProviderEnum.AWS] = Aws.SecretsAdapter;
 adapters[SolutionEnum.SECRETS][Aws.SolutionsEnum.SECRETS] = Aws.SecretsAdapter;
 adapters[ProviderEnum.AWS][SolutionEnum.SECRETS] = Aws.SecretsAdapter;
@@ -27,8 +27,8 @@ adapters[ProviderEnum.AWS][SolutionEnum.EVENTS] = Aws.EventsAdapter;
 
 // GCP
 adapters[ProviderEnum.GCP] = {};
-adapters[SolutionEnum.PROVIDERCONFIG][ProviderEnum.GCP] = Gcp.providerConfig;
-adapters[ProviderEnum.GCP][SolutionEnum.PROVIDERCONFIG] = Gcp.providerConfig;
+adapters[SolutionEnum.CLOUD_PROVIDER][ProviderEnum.GCP] = Gcp.providerConfig;
+adapters[ProviderEnum.GCP][SolutionEnum.CLOUD_PROVIDER] = Gcp.providerConfig;
 adapters[SolutionEnum.SECRETS][ProviderEnum.GCP] = Gcp.SecretsAdapter;
 adapters[SolutionEnum.SECRETS][Gcp.SolutionsEnum.SECRETS] = Gcp.SecretsAdapter;
 adapters[ProviderEnum.GCP][SolutionEnum.SECRETS] = Gcp.SecretsAdapter;
@@ -41,8 +41,8 @@ adapters[ProviderEnum.GCP][SolutionEnum.STORAGE] = Gcp.StorageAdapter;
 
 // LOCAL
 adapters[ProviderEnum.LOCAL] = {};
-adapters[SolutionEnum.PROVIDERCONFIG][ProviderEnum.LOCAL] = Local.providerConfig;
-adapters[ProviderEnum.LOCAL][SolutionEnum.PROVIDERCONFIG] = Local.providerConfig;
+adapters[SolutionEnum.CLOUD_PROVIDER][ProviderEnum.LOCAL] = Local.providerConfig;
+adapters[ProviderEnum.LOCAL][SolutionEnum.CLOUD_PROVIDER] = Local.providerConfig;
 adapters[SolutionEnum.SECRETS][ProviderEnum.LOCAL] = Local.SecretsAdapter;
 adapters[SolutionEnum.SECRETS][Local.SolutionsEnum.SECRETS] = Local.SecretsAdapter;
 adapters[ProviderEnum.LOCAL][SolutionEnum.SECRETS] = Local.SecretsAdapter;
