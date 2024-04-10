@@ -45,12 +45,16 @@ export class Storage extends AStorage implements StorageInterface {
         return instance;
     }
 
-    async readContent(path, options: any = {}) {
+    async readBinary(path: any, options?: any) {
         this.isInitialized();
         const storage = await this.getInstance(options);
         const Bucket = options.Bucket || this.getOptions().Bucket;
         const [fileContent] = await storage.bucket(Bucket).file(path).download();
-        return fileContent?.toString(options.charset || 'utf-8');
+        return fileContent;
+    }
+
+    async readContent(path, options: any = {}) {
+        return (await this.readBinary(path, options))?.toString(options.charset || 'utf-8');
     }
 
     async readStream(path, options: Partial<ReadStreamOptions> = {}): Promise<ReadLineInterface | NodeJS.ReadableStream> {
