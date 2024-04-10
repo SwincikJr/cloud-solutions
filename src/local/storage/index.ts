@@ -36,7 +36,7 @@ export class Fs extends Storage implements StorageInterface {
     async readContent(filePath, options: any = {}) {
         this.isInitialized();
         const _path = path.join(options.basePath || this.options.basePath, filePath);
-        return await fs.readFile(_path, 'utf8');
+        return await fs.readFile(_path, options.charset || 'utf8');
     }
 
     async readStream(filePath, options: Partial<ReadStreamOptions> = {}): Promise<ReadLineInterface | NodeJS.ReadableStream> {

@@ -36,7 +36,7 @@ export class S3 extends AStorage implements StorageInterface {
         return new AWS.S3({});
     }
 
-    async readContent(path, options: any = {}) {
+    async readBinary(path, options: any = {}) {
         this.isInitialized();
         const storage = await this.getInstance(options);
 
@@ -46,7 +46,11 @@ export class S3 extends AStorage implements StorageInterface {
         };
 
         const data = await storage.getObject(storageParams).promise();
-        return data?.Body.toString(options.charset || 'utf-8');
+        return data?.Body;
+    }
+
+    async readContent(path, options: any = {}) {
+        return (await this.readBinary(path, options)).toString(options.charset || 'utf-8');
     }
 
     async readStream(path, options: Partial<ReadStreamOptions> = {}): Promise<ReadLineInterface | NodeJS.ReadableStream> {

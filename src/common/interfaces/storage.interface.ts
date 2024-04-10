@@ -8,6 +8,7 @@ export interface ReadStreamOptions {
 
 export interface StorageInterface {
     initialize(options?: any);
+    readBinary?(path, options?);
     readContent(path, options?);
     readStream(path, options?: Partial<ReadStreamOptions>): Promise<ReadLineInterface | NodeJS.ReadableStream>;
     sendStream(path, options?);
