@@ -149,6 +149,6 @@ export class Fs extends Storage implements StorageInterface {
         // const upload = async (content) => await this._sendContent(filePath, content, params);
         const stream = await createWriteStream(_path);
 
-        return new WriteStream(stream);
+        return new WriteStream(stream, { filePath: _path });
     }
 }
