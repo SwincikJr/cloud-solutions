@@ -51,12 +51,16 @@ export abstract class Storage extends Solution {
         }
     }
 
-    async checkDirectoryContentLength(directoryPath = '', options: any = {}) {
+    async checkPathExists(directoryPath = '', options: any = {}) {
         return (await this.getDirectoryContentLength(directoryPath, options)) > 0;
     }
 
     // TODO: alias [to be removed]
+    async checkDirectoryContentLength(directoryPath = '', options: any = {}) {
+        return await this.checkPathExists(directoryPath, options);
+    }
+
     async checkDirectoryExists(directoryPath = '', options: any = {}) {
-        return await this.checkDirectoryContentLength(directoryPath, options);
+        return await this.checkPathExists(directoryPath, options);
     }
 }

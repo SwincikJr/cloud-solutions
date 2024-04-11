@@ -177,21 +177,21 @@ getDirectoryContentLength.shouldHaveNothingIntoUnexistentDirectory = async (stor
     expect(value).toEqual(0);
 };
 
-const checkDirectoryContentLength: any = {};
-checkDirectoryContentLength.shouldExistRootdir = async (storage) => {
+const checkPathExists: any = {};
+checkPathExists.shouldExistRootdir = async (storage) => {
     expect.assertions(1);
-    const result = await storage.checkDirectoryContentLength();
+    const result = await storage.checkPathExists();
     expect(result).toBeTruthy();
 };
-checkDirectoryContentLength.shouldExistDir = async (storage) => {
+checkPathExists.shouldExistDir = async (storage) => {
     expect.assertions(1);
     const { mockDir } = getVariables(storage);
-    const result = await storage.checkDirectoryContentLength(mockDir);
+    const result = await storage.checkPathExists(mockDir);
     expect(result).toBeTruthy();
 };
-checkDirectoryContentLength.shouldNotExist = async (storage) => {
+checkPathExists.shouldNotExist = async (storage) => {
     expect.assertions(1);
-    const result = await storage.checkDirectoryContentLength('unexistent');
+    const result = await storage.checkPathExists('unexistent');
     expect(result).toBeFalsy();
 };
 
@@ -227,7 +227,7 @@ deleteDirectory.shouldOmitDeletionOfUnexistentDirectory = async (storage) => {
 };
 
 export {
-    checkDirectoryContentLength,
+    checkPathExists,
     checkOptions,
     createInstance,
     deleteDirectory,

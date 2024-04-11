@@ -18,8 +18,9 @@ export interface StorageInterface {
     deleteDirectory(directoryName, options?);
     readDirectory(directoryName?, options?): Promise<any[]>;
     getDirectoryContentLength(directoryName?, options?): Promise<number>;
-    checkDirectoryContentLength(directoryName?, options?): Promise<boolean>;
+    checkPathExists(directoryName?, options?): Promise<boolean>;
     // TODO: alias [to be removed]
+    checkDirectoryContentLength(directoryName?, options?): Promise<boolean>;
     checkDirectoryExists(directoryName?, options?): Promise<boolean>;
     createDirIfNotExists(path: string);
 }

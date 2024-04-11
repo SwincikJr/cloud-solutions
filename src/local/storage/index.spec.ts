@@ -6,7 +6,7 @@ import path from 'path';
 import { Interface } from 'readline';
 
 import {
-    checkDirectoryContentLength,
+    checkPathExists,
     checkOptions,
     deleteDirectory,
     deleteFile,
@@ -114,17 +114,17 @@ describe('Local Storage', () => {
         });
     });
 
-    describe('common method: checkDirectoryContentLength', () => {
+    describe('common method: checkPathExists', () => {
         it('should exist rootdir', async () => {
-            await checkDirectoryContentLength.shouldExistRootdir(storage);
+            await checkPathExists.shouldExistRootdir(storage);
         });
 
         it('should exist dir', async () => {
-            await checkDirectoryContentLength.shouldExistDir(storage);
+            await checkPathExists.shouldExistDir(storage);
         });
 
         it('should not exist', async () => {
-            await checkDirectoryContentLength.shouldNotExist(storage);
+            await checkPathExists.shouldNotExist(storage);
         });
     });
 
