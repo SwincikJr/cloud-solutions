@@ -20,6 +20,8 @@ import {
     sendContent,
     sendStream,
     toBeDefined,
+    getVariables,
+    getFileInfo,
 } from '@/common/abstract/storage.test';
 import { sleep } from '@/common/utils';
 
@@ -147,6 +149,16 @@ describe('Aws Storage', () => {
 
         it('should not exist', async () => {
             await checkPathExists.shouldNotExist(storage);
+        });
+    });
+
+    describe('common method: getFileInfo', () => {
+        it('should return file info', async () => {
+            await getFileInfo.shouldReturnFileInfo(storage);
+        });
+
+        it('should throw error for unexistent file', async () => {
+            await getFileInfo.shouldThrowErrorForUnexistentFile(storage);
         });
     });
 

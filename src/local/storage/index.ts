@@ -3,7 +3,7 @@ const debug = _debug('solutions:storage:fs');
 
 import path from 'path';
 import { Interface as ReadLineInterface, createInterface } from 'readline';
-import fs from 'fs/promises';
+import fsp from 'fs/promises';
 import { createReadStream, existsSync, lstatSync, mkdirSync, createWriteStream } from 'fs';
 import { each, map } from 'lodash';
 
@@ -36,7 +36,7 @@ export class Fs extends Storage implements StorageInterface {
     async readContent(filePath, options: any = {}) {
         this.isInitialized();
         const _path = path.join(options.basePath || this.options.basePath, filePath);
-        return await fs.readFile(_path, options.charset || 'utf8');
+        return await fsp.readFile(_path, options.charset || 'utf8');
     }
 
     async readStream(filePath, options: Partial<ReadStreamOptions> = {}): Promise<ReadLineInterface | NodeJS.ReadableStream> {
@@ -77,7 +77,7 @@ export class Fs extends Storage implements StorageInterface {
             _path = path.join(options.basePath || this.options.basePath, filePath);
 
             this.createDirIfNotExists(_path);
-            await fs.writeFile(_path, content);
+            await fsp.writeFile(_path, content);
             debug(`File sent to ${filePath}`);
         } catch (error) {
             debug(`Fail sending file ${filePath}: ${error}`);
@@ -93,7 +93,7 @@ export class Fs extends Storage implements StorageInterface {
         let _path;
         try {
             _path = path.join(options.basePath || this.options.basePath, filePath);
-            await fs.rm(_path, { force: true });
+            await fsp.rm(_path, { force: true });
             debug(`Deleted file ${_path}`);
             return StorageOutputEnum.Success;
         } catch (error) {
@@ -107,7 +107,7 @@ export class Fs extends Storage implements StorageInterface {
         let _path;
         try {
             _path = path.join(options.basePath || this.options.basePath, directoryPath);
-            await fs.rm(_path, { recursive: true, force: true });
+            await fsp.rm(_path, { recursive: true, force: true });
             debug(`Deleted directory ${_path}`);
             return StorageOutputEnum.Success;
         } catch (error) {
@@ -121,7 +121,7 @@ export class Fs extends Storage implements StorageInterface {
         let _path;
         try {
             _path = path.join(options.basePath || this.options.basePath, directoryPath);
-            const objects = await fs.readdir(_path);
+            const objects = await fsp.readdir(_path);
             const list = [];
 
             for (const name of objects) {
@@ -150,5 +150,16 @@ export class Fs extends Storage implements StorageInterface {
         const stream = await createWriteStream(_path);
 
         return new WriteStream(stream, { filePath: _path });
+    }
+
+    async getFileInfo(path_, options: any = {}) {
+        this.isInitialized();
+        const fullpath = path.join(options.basePath || this.options.basePath, path_);
+        const data = await fsp.stat(fullpath);
+
+        return {
+            contentLength: data.size,
+            etag: data.ino + '', // fake tag
+        };
     }
 }

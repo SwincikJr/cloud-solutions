@@ -173,4 +173,33 @@ export class S3 extends AStorage implements StorageInterface {
 
         return map(objects?.Contents || [], (item) => item?.Key);
     }
+
+    _getFileInfo(params = {}, storage): Promise<any> {
+        return new Promise((resolve, reject) => {
+            storage.headObject(params, (err, data) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(data);
+                }
+            });
+        });
+    }
+
+    async getFileInfo(path, options: any = {}) {
+        this.isInitialized();
+        const storage = await this.getInstance(options);
+
+        const params = {
+            ...this.mergeStorageOptions(options, keyFields),
+            Key: path,
+        };
+
+        const data = await this._getFileInfo(params, storage);
+
+        return {
+            contentLength: data.ContentLength,
+            etag: data.ETag.replace(/"/g, ''),
+        };
+    }
 }

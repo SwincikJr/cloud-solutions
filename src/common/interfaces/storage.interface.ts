@@ -19,6 +19,7 @@ export interface StorageInterface {
     readDirectory(directoryName?, options?): Promise<any[]>;
     getDirectoryContentLength(directoryName?, options?): Promise<number>;
     checkPathExists(directoryName?, options?): Promise<boolean>;
+    getFileInfo(path: string, options?);
     // TODO: alias [to be removed]
     checkDirectoryContentLength(directoryName?, options?): Promise<boolean>;
     checkDirectoryExists(directoryName?, options?): Promise<boolean>;

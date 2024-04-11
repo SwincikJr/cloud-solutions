@@ -146,4 +146,33 @@ export class Storage extends AStorage implements StorageInterface {
 
         return filePaths;
     }
+
+    _readFileInfo(params = {}, storage) {
+        return new Promise((resolve, reject) => {
+            storage.headObject(params, function (err, data) {
+                if (err) {
+                    console.log('Erro ao obter informações do objeto:', err);
+                    reject(err);
+                } else {
+                    console.log('Informações do objeto:', data);
+                    console.log('Tamanho do arquivo:', data.ContentLength, 'bytes');
+                    resolve(data);
+                }
+            });
+        });
+    }
+
+    async getFileInfo(path, options: any = {}) {
+        this.isInitialized();
+        const storage = await this.getInstance(options);
+        const Bucket = options.Bucket || this.getOptions().Bucket;
+
+        const file = storage.bucket(Bucket).file(path);
+        const data = await file.getMetadata();
+
+        return {
+            contentLength: data[0].size,
+            etag: data[0].etag,
+        };
+    }
 }

@@ -13,7 +13,7 @@ const detectCloudName = function (storage) {
             return 'local';
     }
 };
-const getVariables = function (storage) {
+export const getVariables = function (storage) {
     const cloudName = detectCloudName(storage);
     if (!cloudName) throw new Error('Cloud name not detected');
     if (!variables[cloudName]) variables[cloudName] = storageMock(cloudName);
@@ -195,6 +195,20 @@ checkPathExists.shouldNotExist = async (storage) => {
     expect(result).toBeFalsy();
 };
 
+const getFileInfo: any = {};
+getFileInfo.shouldReturnFileInfo = async (storage) => {
+    expect.assertions(3);
+    const { mockFilePath } = getVariables(storage);
+    const data = await storage.getFileInfo(mockFilePath);
+    expect(data).toBeDefined();
+    expect(data).toHaveProperty('contentLength');
+    expect(data).toHaveProperty('etag');
+};
+getFileInfo.shouldThrowErrorForUnexistentFile = async (storage) => {
+    expect.assertions(1);
+    await expect(storage.getFileInfo('unexistent')).rejects.toThrow();
+};
+
 const cleanAfter = true;
 const deleteFile: any = {};
 deleteFile.shouldDo = async (storage) => {
@@ -233,6 +247,7 @@ export {
     deleteDirectory,
     deleteFile,
     getDirectoryContentLength,
+    getFileInfo,
     getInstance,
     readContent,
     readDirectory,
