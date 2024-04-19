@@ -3,6 +3,7 @@ import { SolutionsFactory } from './solutions.factory';
 import { SolutionEnum } from './common/types/solution.enum';
 import { ProviderEnum } from './common/types/provider.enum';
 import { StorageOutputEnum } from './common/types/storageOutput.enum';
+import { LineBreakerEnum } from './common/types/lineBreaker.enum';
 
 import Aws from './aws';
 import Local from './local';
@@ -36,6 +37,7 @@ export {
     SolutionEnum,
     ProviderEnum,
     StorageOutputEnum,
+    LineBreakerEnum,
     // interfaces
     EventsInterface,
     HandlerOptionsInterface,

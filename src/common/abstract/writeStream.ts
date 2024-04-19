@@ -1,7 +1,13 @@
 import { Interface } from 'readline';
+import { LineBreakerEnum } from '../types/lineBreaker.enum';
 
 export abstract class WriteStream {
     protected lineIndex = 0;
+    protected lineBreaker = LineBreakerEnum.LF;
+
+    setLineBreaker(lineBreaker: LineBreakerEnum) {
+        this.lineBreaker = lineBreaker;
+    }
 
     getRawStream() {
         return this['_stream'];
@@ -24,7 +30,7 @@ export abstract class WriteStream {
     }
 
     async writeLine(content) {
-        const lineBreak = this.isFirstLine() ? '' : '\n';
+        const lineBreak = this.isFirstLine() ? '' : this.lineBreaker;
         this.lineIndex++;
 
         return await this.write(lineBreak + content);
