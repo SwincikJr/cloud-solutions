@@ -1,6 +1,8 @@
 import { Interface } from 'readline';
+import { LineBreakerEnum } from '../types/lineBreaker.enum';
 
 export interface WriteStreamInterface {
+    setLineBreaker(lineBreaker: LineBreakerEnum);
     getLineIndex();
     getLineNumber();
     isFirstLine();
