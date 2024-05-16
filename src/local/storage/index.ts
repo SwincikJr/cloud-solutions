@@ -5,7 +5,6 @@ import path from 'path';
 import { Interface as ReadLineInterface, createInterface } from 'readline';
 import fsp from 'fs/promises';
 import { createReadStream, existsSync, lstatSync, mkdirSync, createWriteStream } from 'fs';
-import { each, map } from 'lodash';
 
 import { StorageOutputEnum } from '../../common/types/storageOutput.enum';
 import { ReadStreamOptions, StorageInterface } from '../../common/interfaces/storage.interface';
@@ -21,9 +20,20 @@ export class Fs extends Storage implements StorageInterface {
     setOptions(options: any = {}) {
         super.setOptions(options);
         if (this.options.Bucket) {
-            this.options.baseDir += '/' + this.options.Bucket;
-            this.options.basePath += '/' + this.options.Bucket;
+            this.options.baseDir = path.join(this.options.baseDir, this.options.Bucket);
+            this.options.basePath = path.join(this.options.basePath, this.options.Bucket);
         }
+    }
+
+    buildPath(path_, options: any = {}) {
+        const basePath = this.getBasePath(options);
+
+        if (path_.startsWith(basePath)) return path_;
+        return path.join(basePath, path_);
+    }
+
+    getBasePath(options: any = {}) {
+        return options.basePath || this.options.basePath;
     }
 
     checkOptions() {
@@ -35,13 +45,13 @@ export class Fs extends Storage implements StorageInterface {
 
     async readContent(filePath, options: any = {}) {
         this.isInitialized();
-        const _path = path.join(options.basePath || this.options.basePath, filePath);
+        const _path = this.buildPath(filePath, options);
         return await fsp.readFile(_path, options.charset || 'utf8');
     }
 
     async readStream(filePath, options: Partial<ReadStreamOptions> = {}): Promise<ReadLineInterface | NodeJS.ReadableStream> {
         this.isInitialized();
-        const _path = path.join(options.basePath || this.options.basePath, filePath);
+        const _path = this.buildPath(filePath, options);
         try {
             if (existsSync(_path)) {
                 const data = await createReadStream(_path, { start: 0 });
@@ -58,25 +68,31 @@ export class Fs extends Storage implements StorageInterface {
         }
     }
 
-    createDirIfNotExists(_path) {
-        let directoryPath = !_path.startsWith(this.options.basePath) ? path.join(this.options.basePath, _path) : _path;
-
-        const splitDirs = directoryPath.split('/');
-        splitDirs.pop();
-        directoryPath = splitDirs.join('/');
-
+    async createDirIfNotExists(path, options: any = {}) {
+        const directoryPath = this.buildPath(path);
         if (!existsSync(directoryPath)) {
             mkdirSync(directoryPath, { recursive: true });
         }
+    }
+
+    async createDirForFileIfNotExists(path_, options: any = {}) {
+        let directoryPath = this.buildPath(path_, options);
+
+        const splitDirs = directoryPath.split('/');
+        // remove filename
+        splitDirs.pop();
+        directoryPath = splitDirs.join('/');
+
+        return await this.createDirIfNotExists(directoryPath, options);
     }
 
     async _sendContent(filePath, content, options: any = {}) {
         this.isInitialized();
         let _path;
         try {
-            _path = path.join(options.basePath || this.options.basePath, filePath);
+            _path = this.buildPath(filePath, options);
 
-            this.createDirIfNotExists(_path);
+            this.createDirForFileIfNotExists(_path);
             await fsp.writeFile(_path, content);
             debug(`File sent to ${filePath}`);
         } catch (error) {
@@ -92,7 +108,7 @@ export class Fs extends Storage implements StorageInterface {
         this.isInitialized();
         let _path;
         try {
-            _path = path.join(options.basePath || this.options.basePath, filePath);
+            _path = this.buildPath(filePath, options);
             await fsp.rm(_path, { force: true });
             debug(`Deleted file ${_path}`);
             return StorageOutputEnum.Success;
@@ -106,7 +122,7 @@ export class Fs extends Storage implements StorageInterface {
         this.isInitialized();
         let _path;
         try {
-            _path = path.join(options.basePath || this.options.basePath, directoryPath);
+            _path = this.buildPath(directoryPath, options);
             await fsp.rm(_path, { recursive: true, force: true });
             debug(`Deleted directory ${_path}`);
             return StorageOutputEnum.Success;
@@ -116,17 +132,17 @@ export class Fs extends Storage implements StorageInterface {
         }
     }
 
-    async readDirectory(directoryPath = '', options: any = {}): Promise<any> {
+    async readDirectory(directoryPath_ = '', options: any = {}): Promise<any> {
         this.isInitialized();
-        let _path;
+        let finalPath;
         try {
-            _path = path.join(options.basePath || this.options.basePath, directoryPath);
-            const objects = await fsp.readdir(_path);
+            finalPath = this.buildPath(directoryPath_, options);
+            const objects = await fsp.readdir(finalPath);
             const list = [];
 
             for (const name of objects) {
-                const itemFullpath = path.join(options.basePath || this.options.basePath, directoryPath, name);
-                const itemPath = [directoryPath, name].join('/');
+                const itemFullpath = path.join(finalPath, name);
+                const itemPath = [directoryPath_, name].join('/');
                 if (!lstatSync(itemFullpath).isDirectory()) {
                     list.push(itemPath);
                     continue;
@@ -136,16 +152,16 @@ export class Fs extends Storage implements StorageInterface {
 
             return list;
         } catch (error) {
-            if (!options.silent) debug(`Fail reading directory ${_path}`, error);
+            if (!options.silent) debug(`Fail reading directory ${finalPath}`, error);
             return [];
         }
     }
 
     async sendStream(filePath, options: any = {}) {
         this.isInitialized();
-        this.createDirIfNotExists(filePath);
+        await this.createDirForFileIfNotExists(filePath);
 
-        const _path = path.join(options.basePath || this.options.basePath, filePath);
+        const _path = this.buildPath(filePath, options);
         // const upload = async (content) => await this._sendContent(filePath, content, params);
         const stream = await createWriteStream(_path);
 
@@ -154,7 +170,7 @@ export class Fs extends Storage implements StorageInterface {
 
     async getFileInfo(path_, options: any = {}) {
         this.isInitialized();
-        const fullpath = path.join(options.basePath || this.options.basePath, path_);
+        const fullpath = this.buildPath(path_, options);
         const data = await fsp.stat(fullpath);
 
         return {

@@ -16,11 +16,13 @@ import { StorageInterface } from './common/interfaces/storage.interface';
 import { Events } from './common/abstract/events';
 import { Secrets } from './common/abstract/secrets';
 import { Storage } from './common/abstract/storage';
+import { Sftp } from './thirdparty/sftp';
 
 const Adapters = {
     Aws,
     Local,
     RabbitMQ,
+    Sftp,
 };
 
 const Abstracts = {

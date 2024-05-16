@@ -52,7 +52,8 @@ export abstract class Storage extends Solution {
     }
 
     async checkPathExists(directoryPath = '', options: any = {}) {
-        return (await this.getDirectoryContentLength(directoryPath, options)) > 0;
+        const contentLength = await this.getDirectoryContentLength(directoryPath, options);
+        return contentLength > 0;
     }
 
     // TODO: alias [to be removed]
