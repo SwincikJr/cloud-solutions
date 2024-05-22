@@ -113,10 +113,10 @@ sendStream.shouldSendShortContent = async (storage, sleep_ = 0) => {
     await sendStream.checkFinalContent(storage, mockFileStreamShortPath, mockFileStreamContent);
 };
 
-sendStream.shouldSendLongContent = async (storage, sleep_ = 0) => {
+sendStream.shouldSendLongContent = async (storage, path_ = '', sleep_ = 0) => {
     expect.assertions(1);
     const { mockFileStreamLongPath, mockContentLongList } = getVariables(storage);
-    const stream = await storage.sendStream(mockFileStreamLongPath);
+    const stream = await storage.sendStream(path_ || mockFileStreamLongPath);
 
     for (const line of mockContentLongList) {
         await stream.writeLine(line);

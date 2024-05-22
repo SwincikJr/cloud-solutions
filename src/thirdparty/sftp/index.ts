@@ -54,9 +54,13 @@ export class Sftp extends Storage implements StorageInterface {
         return bind(Fs.prototype.getBasePath, this)(options);
     }
 
+    isStayConnectActive() {
+        return !!this.options.stayConnected;
+    }
+
     async createGlobalInstance() {
         this.instance = null;
-        if (this.options.stayConnected) this.instance = await this.createInstance(this.options);
+        if (this.isStayConnectActive()) this.instance = await this.createInstance(this.options);
     }
 
     async createInstance(options_: any = {}): Promise<any> {
@@ -76,7 +80,7 @@ export class Sftp extends Storage implements StorageInterface {
     }
 
     async getInstance(options: any = {}) {
-        return options.instance || (this.options.stayConnected ? this.instance : await this.createInstance(options));
+        return options.instance || (this.isStayConnectActive() ? this.instance : await this.createInstance(options));
     }
 
     filterAuthMethod(connectOptions) {
@@ -135,7 +139,7 @@ export class Sftp extends Storage implements StorageInterface {
     }
 
     async reconnectGlobalInstance() {
-        if (this.options.stayConnected) {
+        if (this.isStayConnectActive()) {
             await this.closeInstance();
             await this.createGlobalInstance();
         }
@@ -144,7 +148,7 @@ export class Sftp extends Storage implements StorageInterface {
     async closeInstanceIfNotGlobal(instance, options: any = {}) {
         // does not close instance when it was opened by other method
         if (!options.instance) {
-            if (!this.options.stayConnected) {
+            if (!this.isStayConnectActive()) {
                 await this._closeInstance(instance);
             }
         }

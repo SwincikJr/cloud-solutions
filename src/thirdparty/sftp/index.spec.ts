@@ -6,6 +6,35 @@ import { Interface } from 'readline';
 import SftpClient from 'ssh2-sftp-client';
 
 const globalTimeout = 10000;
+
+const instantiate = async (providerOptions: any = {}, initializeOptions: any = {}) => {
+    const storage = new Sftp(providerOptions);
+    await storage.initialize(initializeOptions);
+    return storage;
+};
+
+const mainProviderOptions = () => {
+    return {
+        host: process.env.STORAGE_A_HOST,
+        port: process.env.STORAGE_A_PORT,
+        user: process.env.STORAGE_A_USER,
+        pass: process.env.STORAGE_A_PASS,
+        privateKey: process.env.STORAGE_A_PRIVATEKEY,
+    };
+};
+
+const mainInitializeOptions = () => {
+    return {
+        Bucket: process.env.STORAGE_A_BASEPATH,
+    };
+};
+
+const mainInstantiate = async (options: any = {}) => {
+    const providerOptions = mainProviderOptions();
+    const initializeOptions = { ...options, ...mainInitializeOptions() };
+
+    return await instantiate(providerOptions, initializeOptions);
+};
 // import { WriteStream } from './writeStream';
 import {
     checkPathExists,
@@ -28,18 +57,11 @@ import { WriteStream } from './writeStream';
 
 describe('Sftp Storage', () => {
     let storage: Sftp;
+    let variables: any;
 
     beforeAll(async () => {
-        const providerOptions = {
-            host: process.env.STORAGE_A_HOST,
-            port: process.env.STORAGE_A_PORT,
-            user: process.env.STORAGE_A_USER,
-            pass: process.env.STORAGE_A_PASS,
-            privateKey: process.env.STORAGE_A_PRIVATEKEY,
-        };
-
-        storage = new Sftp(providerOptions);
-        await storage.initialize({ stayConnected: true, basePath: process.env.STORAGE_A_BASEPATH });
+        storage = await mainInstantiate({ stayConnected: true });
+        variables = getVariables(storage);
     }, globalTimeout);
 
     afterAll(async () => {
@@ -173,6 +195,17 @@ describe('Sftp Storage', () => {
             'should send long content',
             async () => {
                 await sendStream.shouldSendLongContent(storage);
+            },
+            globalTimeout,
+        );
+
+        it(
+            'should send content to a new directory with stayConnected = false',
+            async () => {
+                const storage_ = await mainInstantiate();
+                const { mockDir, mockFileStreamPath } = getVariables(storage);
+                const path_ = mockFileStreamPath.replace(mockDir, [mockDir, 'xxx'].join('/'));
+                await sendStream.shouldSendLongContent(storage_, path_);
             },
             globalTimeout,
         );
