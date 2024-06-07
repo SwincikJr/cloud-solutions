@@ -71,7 +71,14 @@ export abstract class Events extends Solution {
     }
 
     formatQueueName(_name) {
-        return _name.replace(/\//g, '-');
+        const prefix = (this.getOptions().prefix || '').trim();
+
+        const parts = [];
+        if (prefix) parts.push(prefix);
+        parts.push(_name);
+
+        const name = parts.join('-').replace(/\//g, '-');
+        return name;
     }
 
     isConnected() {

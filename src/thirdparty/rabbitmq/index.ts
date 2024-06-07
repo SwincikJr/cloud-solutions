@@ -35,7 +35,11 @@ export class RabbitMQ extends Events implements EventsInterface {
 
             this.connection.once('close', async () => {
                 debug(`@${process.pid} RABBITMQ CONNECTION CLOSED. RETRYING TO RECONNECT...`);
-                await this.reconnect();
+                this.reconnect();
+            });
+            this.connection.once('error', async () => {
+                debug(`@${process.pid} RABBITMQ CONNECTION ENDED UNEXPECTEDLY. RETRYING TO OPEN CONNECTION... ${new Date()}`);
+                this.reconnect();
             });
         } catch (error) {
             return await this.connectOnFail(error);
@@ -66,11 +70,12 @@ export class RabbitMQ extends Events implements EventsInterface {
             }
 
             this.channel.once('close', async () => {
-                debug(`@${process.pid} RABBITMQ CHANNEL CLOSED. RETRYING TO CREATE CHANNEL ON RABBITMQ... ${new Date()}`);
+                debug(`@${process.pid} RABBITMQ CHANNEL CLOSED. RETRYING TO CREATE CHANNEL... ${new Date()}`);
                 this.reconnect();
             });
-            this.channel.on('error', async (error) => {
-                debug(`@${process.pid} RABBITMQ CHANNEL ERROR. ${error.message || ''}`);
+            this.channel.once('error', async (error) => {
+                debug(`@${process.pid} RABBITMQ CHANNEL UNEXPECTED ERROR. ${error.message || ''}`);
+                this.reconnect();
             });
         } catch (error) {
             return await this.createChannelOnFail(error);
