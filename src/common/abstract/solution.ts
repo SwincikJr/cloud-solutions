@@ -11,6 +11,10 @@ export class Solution {
         this.providerOptions = providerOptions;
     }
 
+    static getName() {
+        return this.name.toLowerCase();
+    }
+
     setOptions(options: any = {}) {
         options = omitBy(options, (value) => !value);
         this.options = omitBy(defaultsDeep({}, options, this.defaultOptions), (value) => !value);

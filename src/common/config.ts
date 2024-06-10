@@ -55,7 +55,7 @@ adapters[SolutionEnum.EVENTS][ProviderEnum.LOCAL] = Local.EventsAdapter;
 adapters[SolutionEnum.EVENTS][Local.SolutionsEnum.EVENTS] = Local.EventsAdapter;
 
 // THIRDPARTY
-adapters[SolutionEnum.EVENTS][RabbitMQ.name.toLowerCase()] = RabbitMQ;
-adapters[SolutionEnum.STORAGE][Sftp.name.toLowerCase()] = Sftp;
+adapters[SolutionEnum.EVENTS][RabbitMQ.getName()] = RabbitMQ;
+adapters[SolutionEnum.STORAGE][Sftp.getName()] = Sftp;
 
 export { adapters };
