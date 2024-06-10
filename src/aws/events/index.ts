@@ -1,4 +1,4 @@
-import _, { defaults, intersection, keys, pick } from 'lodash';
+import { defaults, intersection, keys, pick } from 'lodash';
 import _debug from 'debug';
 const debug = _debug('solutions:events');
 
@@ -28,8 +28,8 @@ export class SQS extends Events implements EventsInterface {
         AWS = this.getLibrary('AWS');
         this.checkOptions();
 
-        this.instance = await this.createInstance(options);
-        this.snsInstance = await this.createSNSInstance(options);
+        this.instance = await this.createInstance(this.options);
+        this.snsInstance = await this.createSNSInstance(this.options);
 
         this.options.topicArn = await this.createSNSTopic(this.options.topicName);
         this.options.loadQueues && (await this.options.loadQueues(this));
@@ -46,8 +46,11 @@ export class SQS extends Events implements EventsInterface {
     }
 
     async createInstance(options: any = {}) {
-        await providerConfig(defaults(pick(options, ...keys(keyFields)), pick(this.providerOptions, ...keys(keyFields))));
+        const keyOptions = pick(options, ...keys(keyFields));
+        const keyProviderOptions = pick(this.providerOptions, ...keys(keyFields));
+        const providerOptions = defaults(keyOptions, keyProviderOptions);
 
+        await providerConfig(providerOptions);
         const instance = new AWS.SQS({});
 
         return instance;
@@ -110,10 +113,16 @@ export class SQS extends Events implements EventsInterface {
                 debug('loadQueue:receiveMessage', error.message);
                 if (this.options.throwError) throw error;
             } else {
-                if (data?.Messages?.length)
-                    for (const index in data.Messages) this.receiveMessage(_name, _handler, data.Messages[index], { events: this });
+                // TODO: fn to process messages one by one
+                // TODO: research how to receive N messages in SQS
+                if (data?.Messages?.length) {
+                    for (const index in data.Messages) {
+                        this.receiveMessage(_name, _handler, data.Messages[index], { events: this });
+                    }
+                }
             }
         });
+
         await sleep(this.options.listenInterval);
         this.listener(_name, _handler);
     }
@@ -131,7 +140,7 @@ export class SQS extends Events implements EventsInterface {
                 sqs.sendMessage(params, (error, data) => {
                     if (error) {
                         debug('_sendToQueue:', 'Erro ao enviar mensagem para a fila:', error.message);
-                        if (this.options.throwError) throw error;
+                        if (this.options.throwError) reject(error);
                     } else {
                         debug('_sendToQueue:', 'Mensagem enviada com sucesso:', data.MessageId);
                         resolve(true);

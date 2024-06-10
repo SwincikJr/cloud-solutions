@@ -12,7 +12,8 @@ export class Solution {
     }
 
     setOptions(options: any = {}) {
-        this.options = defaultsDeep({}, options, this.defaultOptions);
+        options = omitBy(options, (value) => !value);
+        this.options = omitBy(defaultsDeep({}, options, this.defaultOptions), (value) => !value);
     }
 
     getOptions() {

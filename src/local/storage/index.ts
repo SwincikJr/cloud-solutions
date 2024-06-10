@@ -20,8 +20,8 @@ export class Fs extends Storage implements StorageInterface {
     setOptions(options: any = {}) {
         super.setOptions(options);
         if (this.options.Bucket) {
-            this.options.baseDir = path.join(this.options.baseDir, this.options.Bucket);
-            this.options.basePath = path.join(this.options.basePath, this.options.Bucket);
+            this.options.baseDir = this.options.baseDir ? path.join(this.options.baseDir, this.options.Bucket) : this.options.Bucket;
+            this.options.basePath = this.options.basePath ? path.join(this.options.basePath, this.options.Bucket) : this.options.Bucket;
         }
     }
 
