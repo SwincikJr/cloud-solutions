@@ -1,7 +1,7 @@
 export interface EventsInterface {
     initialize(options?: any);
-    _sendToQueue(name, data);
-    sendToQueue(name, data, retry?);
+    _sendToQueue(name, data, options?: any);
+    sendToQueue(name, data, options?: any);
     loadQueue(name, handler);
     isConnected();
 }

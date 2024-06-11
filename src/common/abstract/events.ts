@@ -1,31 +1,40 @@
 import _debug from 'debug';
 const debug = _debug('solutions:events');
+const log = _debug('solutions:essential:events');
 
 import { sleep } from '../utils/index';
 import { Solution } from './solution';
+import { cloneDeep, defaultsDeep } from 'lodash';
+
+export const eventsDefaultOptions = {
+    retryInterval: 5000,
+    retryLimit: 3,
+    maxNumberOfMessages: 1,
+};
 
 export abstract class Events extends Solution {
     protected _isConnected = false;
-    public defaultOptions: any = {
-        retryInterval: 5000,
-        maxNumberOfMessages: 1,
-    };
+    public defaultOptions: any = cloneDeep(eventsDefaultOptions);
 
-    async sendToQueue(_name, data, retry = 10) {
+    async sendToQueue(_name, data, options: any = {}) {
+        const _options = defaultsDeep(options, { retry: this.getOptions().retryLimit });
         try {
             !data && (data = {});
-            await this._sendToQueue(_name, data);
+            await this._sendToQueue(_name, data, _options);
         } catch (error) {
-            if (retry > 0) {
-                await sleep(this.options.retryInterval);
-                return await this.sendToQueue(_name, data, --retry);
+            if (_options.retry > 0) {
+                const retryInterval = this.getOptions().retryInterval;
+                console.log(`@${process.pid} Retrying sendToQueue`, retryInterval, error.message);
+                await sleep(retryInterval);
+                _options.retry--;
+                return await this.sendToQueue(_name, data, _options);
             }
-            debug('sendToQueue:', error.message);
+            throw error;
         }
     }
 
-    async _sendToQueue(_name, data): Promise<any> {
-        return { _name, data };
+    async _sendToQueue(_name, data, options: any = {}): Promise<any> {
+        return { _name, data, options };
     }
 
     getMessageBody(message) {
@@ -70,8 +79,12 @@ export abstract class Events extends Solution {
         await this.nack(name, message, options);
     }
 
-    formatQueueName(_name) {
-        const prefix = (this.getOptions().prefix || '').trim();
+    getPrefix(options: any = {}) {
+        return (options.prefix || this.getOptions().prefix || '').trim();
+    }
+
+    formatQueueName(_name, options: any = {}) {
+        const prefix = this.getPrefix(options);
 
         const parts = [];
         if (prefix) parts.push(prefix);

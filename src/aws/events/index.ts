@@ -1,27 +1,34 @@
-import { defaults, intersection, keys, pick } from 'lodash';
+import { cloneDeep, defaults, defaultsDeep, intersection, keys, pick } from 'lodash';
 import _debug from 'debug';
 const debug = _debug('solutions:events');
 
 import { sleep } from '../../common/utils/index';
 import { EventsInterface } from '../../common/interfaces/events.interface';
-import { Events } from '../../common/abstract/events';
+import { Events, eventsDefaultOptions } from '../../common/abstract/events';
 import { keyFields, libraries, providerConfig } from '../index';
 
 let AWS;
-export class SQS extends Events implements EventsInterface {
-    protected libraries = libraries;
-    public defaultOptions: any = {
-        ...Events.prototype.defaultOptions,
+
+export const sqsDefaultOptions = defaultsDeep(
+    {
         listenInterval: 1000,
+        processInterval: 1000,
         params: {
             AttributeNames: ['All'],
             VisibilityTimeout: 120, // em segundos
             WaitTimeSeconds: 0,
         },
-    };
+    },
+    eventsDefaultOptions,
+);
+export class SQS extends Events implements EventsInterface {
+    protected libraries = libraries;
+    public defaultOptions: any = cloneDeep(sqsDefaultOptions);
     protected queueUrls: any = {};
     protected instance;
     protected snsInstance;
+    protected messagesReceived = [];
+    protected messageSlots = 0;
 
     async initialize(options: any = {}) {
         await super.initialize(options);
@@ -33,7 +40,25 @@ export class SQS extends Events implements EventsInterface {
 
         this.options.topicArn = await this.createSNSTopic(this.options.topicName);
         this.options.loadQueues && (await this.options.loadQueues(this));
+        this.processReceivedMessages();
         // this._reconnecting = false;
+    }
+
+    async processReceivedMessages() {
+        if (this.messagesReceived.length) {
+            const promises = [];
+            this.messageSlots = this.getOptions().maxNumberOfMessages;
+            let message = null;
+            while ((message = this.messagesReceived.shift())) {
+                promises.push(this.receiveMessage(message.name, message.handler, message.message, message.options));
+                this.messageSlots--;
+                if (!this.messageSlots) break;
+            }
+            await Promise.all(promises);
+        }
+
+        await sleep(this.options.processInterval);
+        this.processReceivedMessages();
     }
 
     async getInstance(options: any = {}) {
@@ -113,11 +138,15 @@ export class SQS extends Events implements EventsInterface {
                 debug('loadQueue:receiveMessage', error.message);
                 if (this.options.throwError) throw error;
             } else {
-                // TODO: fn to process messages one by one
-                // TODO: research how to receive N messages in SQS
                 if (data?.Messages?.length) {
-                    for (const index in data.Messages) {
-                        this.receiveMessage(_name, _handler, data.Messages[index], { events: this });
+                    const messages = [];
+                    for (const message of data.Messages) {
+                        this.messagesReceived.push({
+                            name: _name,
+                            handler: _handler,
+                            options: { events: this },
+                            message,
+                        });
                     }
                 }
             }
@@ -127,26 +156,30 @@ export class SQS extends Events implements EventsInterface {
         this.listener(_name, _handler);
     }
 
-    _sendToQueue(_name, data) {
-        const name = this.formatQueueName(_name);
+    _sendToQueue(_name, data, options: any = {}) {
+        const name = this.formatQueueName(_name, options);
         return new Promise((resolve, reject) => {
-            this.getQueueUrl(name).then(async (queueUrl) => {
-                const params = {
-                    MessageBody: typeof data === 'object' ? JSON.stringify(data) : data + '',
-                    QueueUrl: queueUrl,
-                };
+            this.getQueueUrl(name)
+                .then(async (queueUrl) => {
+                    const params = {
+                        MessageBody: typeof data === 'object' ? JSON.stringify(data) : data + '',
+                        QueueUrl: queueUrl,
+                    };
 
-                const sqs = await this.getInstance();
-                sqs.sendMessage(params, (error, data) => {
-                    if (error) {
-                        debug('_sendToQueue:', 'Erro ao enviar mensagem para a fila:', error.message);
-                        if (this.options.throwError) reject(error);
-                    } else {
-                        debug('_sendToQueue:', 'Mensagem enviada com sucesso:', data.MessageId);
-                        resolve(true);
-                    }
+                    const sqs = await this.getInstance();
+                    sqs.sendMessage(params, (error, data) => {
+                        if (error) {
+                            debug('_sendToQueue:', 'Erro ao enviar mensagem para a fila:', error.message);
+                            if (this.options.throwError) reject(error);
+                        } else {
+                            debug('_sendToQueue:', 'Mensagem enviada com sucesso:', data.MessageId);
+                            resolve(true);
+                        }
+                    });
+                })
+                .catch((error) => {
+                    reject(error);
                 });
-            });
         });
     }
 
@@ -285,14 +318,14 @@ export class SQS extends Events implements EventsInterface {
                 if (error) {
                     debug('findQueueUrl:', error.message);
                     if (this.options.throwError) throw error;
-                    reject();
+                    reject(error);
                 } else {
                     // Se a fila já existe, utiliza a URL da fila existente
                     if (data.QueueUrls && data.QueueUrls.length > 0) {
                         const queueUrl = data.QueueUrls[0];
                         resolve(queueUrl);
                     } else {
-                        resolve('');
+                        reject(new Error(`Url da fila "${name}" não encontrada`));
                     }
                 }
             });
