@@ -1,6 +1,7 @@
 import { cloneDeep, defaults, defaultsDeep, intersection, keys, pick } from 'lodash';
 import _debug from 'debug';
 const debug = _debug('solutions:events');
+const log = _debug('solutions:essential:events');
 
 import { sleep } from '../../common/utils/index';
 import { EventsInterface } from '../../common/interfaces/events.interface';
@@ -273,30 +274,37 @@ export class SQS extends Events implements EventsInterface {
         });
     }
 
-    async createQueue(name) {
+    async createQueue(name, options: any = {}) {
         const sqs = await this.getInstance();
-        return new Promise((resolve) => {
-            // Verifica se a fila já existe
-            this.findQueueUrl(name).then((queueUrl) => {
-                if (queueUrl) {
-                    // debug(`A fila ${name} já existe (${queueUrl})`);
-                    resolve(queueUrl);
+        const createQueue = async (resolve, reject) => {
+            // Se a fila não existe, cria uma nova fila
+            sqs.createQueue({ QueueName: name }, (error, data) => {
+                if (error) {
+                    log('createQueue:', error.message);
+                    if (this.options.throwError) throw error;
+                    reject(error);
+                    // this.createQueueOnFail(name).then((queueUrl) => resolve(queueUrl));
                 } else {
-                    // Se a fila não existe, cria uma nova fila
-                    sqs.createQueue({ QueueName: name }, (error, data) => {
-                        if (error) {
-                            debug('createQueue:', error.message);
-                            if (this.options.throwError) throw error;
-                            // reject(error);
-                            this.createQueueOnFail(name).then((queueUrl) => resolve(queueUrl));
-                        } else {
-                            const queueUrl = data.QueueUrl;
-                            // debug(`A fila ${name} foi criada com sucesso (${queueUrl})`);
-                            resolve(queueUrl);
-                        }
-                    });
+                    const queueUrl = data.QueueUrl;
+                    // debug(`A fila ${name} foi criada com sucesso (${queueUrl})`);
+                    resolve(queueUrl);
                 }
             });
+        };
+        return new Promise((resolve, reject) => {
+            // Verifica se a fila já existe
+            this.findQueueUrl(name)
+                .then((queueUrl) => {
+                    if (queueUrl) {
+                        // debug(`A fila ${name} já existe (${queueUrl})`);
+                        resolve(queueUrl);
+                    } else {
+                        createQueue(resolve, reject);
+                    }
+                })
+                .catch(() => {
+                    createQueue(resolve, reject);
+                });
         });
     }
 
