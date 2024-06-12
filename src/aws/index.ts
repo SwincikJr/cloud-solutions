@@ -23,16 +23,21 @@ export const providerConfig = async (options: any = {}) => {
     if (!options.region || !options.user || !options.pass) {
         throw new Error('Missing some data into cloud credentials. Received: ' + JSON.stringify(options));
     }
-    const { AWS } = await Solution.loadLibraries(libraries);
-    const _config = {
-        region: options.region,
-        accessKeyId: options.user,
-        secretAccessKey: options.pass,
-    };
-    AWS.config.update(_config);
-    AWS.config.region = _config.region;
 
-    return _config;
+    try {
+        const { AWS } = await Solution.loadLibraries(libraries);
+        const _config = {
+            region: options.region,
+            accessKeyId: options.user,
+            secretAccessKey: options.pass,
+        };
+        await AWS.config.update(_config);
+        AWS.config.region = _config.region;
+
+        return _config;
+    } catch (error) {
+        throw new Error('Error trying to configure AWS SDK: ' + error.message);
+    }
 };
 
 export const libraries = {

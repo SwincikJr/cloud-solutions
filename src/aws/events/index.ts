@@ -12,8 +12,8 @@ let AWS;
 
 export const sqsDefaultOptions = defaultsDeep(
     {
-        listenInterval: 1000,
-        processInterval: 1000,
+        listenInterval: 300,
+        processInterval: 300,
         params: {
             AttributeNames: ['All'],
             VisibilityTimeout: 120, // em segundos
@@ -30,6 +30,7 @@ export class SQS extends Events implements EventsInterface {
     protected snsInstance;
     protected messagesReceived = [];
     protected messageSlots = 0;
+    protected isProcessingMessage = false;
 
     async initialize(options: any = {}) {
         await super.initialize(options);
@@ -46,19 +47,24 @@ export class SQS extends Events implements EventsInterface {
     }
 
     async processReceivedMessages() {
+        this.isProcessingMessage = false;
+        this.messageSlots = this.getOptions().maxNumberOfMessages;
+        const promises = [];
         if (this.messagesReceived.length) {
-            const promises = [];
-            this.messageSlots = this.getOptions().maxNumberOfMessages;
             let message = null;
             while ((message = this.messagesReceived.shift())) {
+                this.isProcessingMessage = true;
                 promises.push(this.receiveMessage(message.name, message.handler, message.message, message.options));
                 this.messageSlots--;
                 if (!this.messageSlots) break;
             }
-            await Promise.all(promises);
         }
 
-        await sleep(this.options.processInterval);
+        if (promises.length) {
+            await Promise.all(promises);
+        } else {
+            await sleep(this.options.processInterval);
+        }
         this.processReceivedMessages();
     }
 
@@ -131,30 +137,46 @@ export class SQS extends Events implements EventsInterface {
 
     async listener(_name, _handler) {
         const sqs = await this.getInstance();
+        const callback = async () => {
+            let interval = this.options.listenInterval;
+            if (this.isProcessingMessage) interval *= 10;
 
-        const params = this.buildListenerParams(_name);
+            await sleep(interval);
+            this.listener(_name, _handler);
+        };
 
-        sqs.receiveMessage(params, (error, data) => {
-            if (error) {
-                debug('loadQueue:receiveMessage', error.message);
-                if (this.options.throwError) throw error;
-            } else {
-                if (data?.Messages?.length) {
-                    const messages = [];
-                    for (const message of data.Messages) {
-                        this.messagesReceived.push({
-                            name: _name,
-                            handler: _handler,
-                            options: { events: this },
-                            message,
-                        });
+        this._receiveMessages(_name, _handler, sqs)
+            .then(() => {
+                callback();
+            })
+            .catch(() => {
+                callback();
+            });
+    }
+
+    _receiveMessages(_name, _handler, instance) {
+        return new Promise((resolve, reject) => {
+            const params = this.buildListenerParams(_name);
+            instance.receiveMessage(params, (error, data) => {
+                if (error) {
+                    log('loadQueue:receiveMessage', error.message);
+                    if (this.options.throwError) throw error;
+                    reject(error);
+                } else {
+                    if (data?.Messages?.length) {
+                        for (const message of data.Messages) {
+                            this.messagesReceived.push({
+                                name: _name,
+                                handler: _handler,
+                                options: { events: this },
+                                message,
+                            });
+                        }
                     }
+                    resolve(true);
                 }
-            }
+            });
         });
-
-        await sleep(this.options.listenInterval);
-        this.listener(_name, _handler);
     }
 
     _sendToQueue(_name, data, options: any = {}) {
@@ -225,25 +247,30 @@ export class SQS extends Events implements EventsInterface {
 
     async createSNSTopic(name) {
         const sns = await this.getSNSInstance();
-        return new Promise((resolve) => {
-            this.findTopic(name).then((topicArn) => {
-                if (topicArn) {
-                    // debug(`A fila ${name} já existe (${queueUrl})`);
-                    resolve(topicArn);
-                } else {
-                    sns.createTopic({ Name: name }, (error, data) => {
-                        if (error) {
-                            debug('Erro ao criar tópico: ', error.message);
-                            if (this.options.throwError) throw error;
-                            // reject(error);
-                            this.createTopicOnFail(name).then((topicArn) => resolve(topicArn));
-                        } else {
-                            // debug(`Tópico criado com sucesso: ${data.TopicArn}`);
-                            resolve(data.TopicArn);
-                        }
-                    });
-                }
-            });
+        return new Promise((resolve, reject) => {
+            this.findTopic(name)
+                .then((topicArn) => {
+                    if (topicArn) {
+                        // debug(`A fila ${name} já existe (${queueUrl})`);
+                        resolve(topicArn);
+                    } else {
+                        sns.createTopic({ Name: name }, (error, data) => {
+                            if (error) {
+                                log('Erro ao criar tópico: ', error.message);
+                                if (this.options.throwError) throw error;
+                                reject(error);
+                                // this.createTopicOnFail(name).then((topicArn) => resolve(topicArn));
+                            } else {
+                                // debug(`Tópico criado com sucesso: ${data.TopicArn}`);
+                                resolve(data.TopicArn);
+                            }
+                        });
+                    }
+                })
+                .catch((error) => {
+                    log('createSNSTopic:', error);
+                    reject(error);
+                });
         });
     }
 
@@ -276,7 +303,7 @@ export class SQS extends Events implements EventsInterface {
 
     async createQueue(name, options: any = {}) {
         const sqs = await this.getInstance();
-        const createQueue = async (resolve, reject) => {
+        const createQueue = (resolve, reject) => {
             // Se a fila não existe, cria uma nova fila
             sqs.createQueue({ QueueName: name }, (error, data) => {
                 if (error) {
@@ -361,7 +388,7 @@ export class SQS extends Events implements EventsInterface {
                     if (error) {
                         debug('queueSubscribe:', error.message);
                         if (this.options.throwError) throw error;
-                        reject();
+                        reject(error);
                     } else {
                         // debug(`Fila inscrita no tópico ${this.options.topicArn}`);
                         resolve(true);

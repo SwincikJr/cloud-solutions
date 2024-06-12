@@ -24,7 +24,7 @@ export abstract class Events extends Solution {
         } catch (error) {
             if (_options.retry > 0) {
                 const retryInterval = this.getOptions().retryInterval;
-                console.log(`@${process.pid} Retrying sendToQueue`, retryInterval, error.message);
+                debug(`@${process.pid} Retrying sendToQueue`, retryInterval, error.message);
                 await sleep(retryInterval);
                 _options.retry--;
                 return await this.sendToQueue(_name, data, _options);
