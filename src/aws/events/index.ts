@@ -28,6 +28,7 @@ export class SQS extends Events implements EventsInterface {
     protected queueUrls: any = {};
     protected instance;
     protected snsInstance;
+    protected queueListeners = [];
     protected messagesReceived = [];
     protected messageSlots = 0;
     protected isProcessingMessage = false;
@@ -51,9 +52,9 @@ export class SQS extends Events implements EventsInterface {
         this.messageSlots = this.getOptions().maxNumberOfMessages;
         const promises = [];
         if (this.messagesReceived.length) {
+            this.isProcessingMessage = true;
             let message = null;
             while ((message = this.messagesReceived.shift())) {
-                this.isProcessingMessage = true;
                 promises.push(this.receiveMessage(message.name, message.handler, message.message, message.options));
                 this.messageSlots--;
                 if (!this.messageSlots) break;
@@ -62,10 +63,9 @@ export class SQS extends Events implements EventsInterface {
 
         if (promises.length) {
             await Promise.all(promises);
-        } else {
-            await sleep(this.options.processInterval);
+            this.isProcessingMessage = false;
         }
-        this.processReceivedMessages();
+        this.listenAll();
     }
 
     async getInstance(options: any = {}) {
@@ -120,7 +120,7 @@ export class SQS extends Events implements EventsInterface {
             debug('loadQueue:queueUrl', this.queueUrls[name]);
 
             await this.queueSubscribe(this.queueUrls[name]);
-            this.listener(name, _handler);
+            this.queueListeners.push({ name, handler: _handler });
         }
     }
 
@@ -135,23 +135,18 @@ export class SQS extends Events implements EventsInterface {
         return params;
     }
 
-    async listener(_name, _handler) {
+    async listenAll() {
+        await sleep(this.options.listenInterval);
+        for (const listen of this.queueListeners) {
+            await this.listen(listen.name, listen.handler);
+        }
+
+        this.processReceivedMessages();
+    }
+
+    async listen(_name, _handler) {
         const sqs = await this.getInstance();
-        const callback = async () => {
-            let interval = this.options.listenInterval;
-            if (this.isProcessingMessage) interval *= 10;
-
-            await sleep(interval);
-            this.listener(_name, _handler);
-        };
-
-        this._receiveMessages(_name, _handler, sqs)
-            .then(() => {
-                callback();
-            })
-            .catch(() => {
-                callback();
-            });
+        await this._receiveMessages(_name, _handler, sqs);
     }
 
     _receiveMessages(_name, _handler, instance) {
