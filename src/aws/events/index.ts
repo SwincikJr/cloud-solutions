@@ -43,7 +43,7 @@ export class SQS extends Events implements EventsInterface {
 
         this.options.topicArn = await this.createSNSTopic(this.options.topicName);
         this.options.loadQueues && (await this.options.loadQueues(this));
-        this.processReceivedMessages();
+        this.listenAll();
         // this._reconnecting = false;
     }
 
@@ -65,7 +65,9 @@ export class SQS extends Events implements EventsInterface {
             await Promise.all(promises);
             this.isProcessingMessage = false;
         }
-        this.listenAll();
+
+        if (this.messagesReceived.length) this.processReceivedMessages();
+        else this.listenAll();
     }
 
     async getInstance(options: any = {}) {
@@ -137,9 +139,10 @@ export class SQS extends Events implements EventsInterface {
 
     async listenAll() {
         await sleep(this.options.listenInterval);
-        for (const listen of this.queueListeners) {
-            await this.listen(listen.name, listen.handler);
-        }
+        if (this.queueListeners.length)
+            for (const listen of this.queueListeners) {
+                await this.listen(listen.name, listen.handler);
+            }
 
         this.processReceivedMessages();
     }
