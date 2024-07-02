@@ -158,7 +158,6 @@ export class SQS extends Events implements EventsInterface {
             instance.receiveMessage(params, (error, data) => {
                 if (error) {
                     log('loadQueue:receiveMessage', error.message);
-                    if (this.options.throwError) throw error;
                     reject(error);
                 } else {
                     if (data?.Messages?.length) {
@@ -191,7 +190,7 @@ export class SQS extends Events implements EventsInterface {
                     sqs.sendMessage(params, (error, data) => {
                         if (error) {
                             debug('_sendToQueue:', 'Erro ao enviar mensagem para a fila:', error.message);
-                            if (this.options.throwError) reject(error);
+                            reject(error);
                         } else {
                             debug('_sendToQueue:', 'Mensagem enviada com sucesso:', data.MessageId);
                             resolve(true);
@@ -215,7 +214,6 @@ export class SQS extends Events implements EventsInterface {
         sqs.deleteMessage(deleteParams, (error, data) => {
             if (error) {
                 debug('ack:', error.message);
-                if (this.options.throwError) throw error;
             } else {
                 debug(`Mensagem ${message.MessageId} deletada da fila`);
             }
@@ -233,6 +231,7 @@ export class SQS extends Events implements EventsInterface {
 
         const sqs = await this.getInstance();
         sqs.changeMessageVisibility(changeParams, (error, data) => {
+            // TODO: revisar
             if (error) {
                 debug('Erro ao alterar visibilidade da mensagem: ', error.message);
                 if (this.options.throwError) throw error;
@@ -255,7 +254,6 @@ export class SQS extends Events implements EventsInterface {
                         sns.createTopic({ Name: name }, (error, data) => {
                             if (error) {
                                 log('Erro ao criar tópico: ', error.message);
-                                if (this.options.throwError) throw error;
                                 reject(error);
                                 // this.createTopicOnFail(name).then((topicArn) => resolve(topicArn));
                             } else {
@@ -283,9 +281,8 @@ export class SQS extends Events implements EventsInterface {
             sns.listTopics({}, (error, data) => {
                 if (error) {
                     debug('Erro ao listar tópicos: ', error.message);
-                    if (this.options.throwError) throw error;
                     // reject(error);
-                    reject();
+                    reject(error);
                 } else {
                     let topicArn = '';
                     data.Topics.some((topic) => {
@@ -306,7 +303,6 @@ export class SQS extends Events implements EventsInterface {
             sqs.createQueue({ QueueName: name }, (error, data) => {
                 if (error) {
                     log('createQueue:', error.message);
-                    if (this.options.throwError) throw error;
                     reject(error);
                     // this.createQueueOnFail(name).then((queueUrl) => resolve(queueUrl));
                 } else {
@@ -322,6 +318,7 @@ export class SQS extends Events implements EventsInterface {
             this.findQueueUrl(name)
                 .then((queueUrl) => {
                     if (queueUrl) {
+                        //
                         debug(`A fila ${name} já existe (${queueUrl})`);
                         resolve(queueUrl);
                     } else {
@@ -348,17 +345,16 @@ export class SQS extends Events implements EventsInterface {
         const sqs = await this.getInstance();
         return new Promise((resolve, reject) => {
             // Verifica se a fila já existe
-            sqs.listQueues({ QueueNamePrefix: name }, (error, data) => {
+            sqs.getQueueUrl({ QueueName: name }, (error, data) => {
                 if (error) {
                     debug('findQueueUrl:', error.message);
-                    if (this.options.throwError) throw error;
                     reject(error);
                 } else {
                     // Se a fila já existe, utiliza a URL da fila existente
-                    if (data.QueueUrls && data.QueueUrls.length > 0) {
-                        const queueUrl = data.QueueUrls[0];
-                        resolve(queueUrl);
+                    if (data.QueueUrl) {
+                        resolve(data.QueueUrl);
                     } else {
+                        debug('findQueueUrl:', `Url da fila "${name}" não encontrada`, data);
                         reject(new Error(`Url da fila "${name}" não encontrada`));
                     }
                 }
@@ -386,7 +382,6 @@ export class SQS extends Events implements EventsInterface {
                 (error, data) => {
                     if (error) {
                         debug('queueSubscribe:', error.message);
-                        if (this.options.throwError) throw error;
                         reject(error);
                     } else {
                         // debug(`Fila inscrita no tópico ${this.options.topicArn}`);
