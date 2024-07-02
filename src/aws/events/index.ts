@@ -119,7 +119,7 @@ export class SQS extends Events implements EventsInterface {
         for (const _name of names) {
             const name = this.formatQueueName(_name);
             this.queueUrls[name] = await this.createQueue(name);
-            debug('loadQueue:queueUrl', this.queueUrls[name]);
+            debug('loadQueue:queueUrl', name, this.queueUrls[name]);
 
             await this.queueSubscribe(this.queueUrls[name]);
             this.queueListeners.push({ name, handler: _handler });
@@ -311,17 +311,18 @@ export class SQS extends Events implements EventsInterface {
                     // this.createQueueOnFail(name).then((queueUrl) => resolve(queueUrl));
                 } else {
                     const queueUrl = data.QueueUrl;
-                    // debug(`A fila ${name} foi criada com sucesso (${queueUrl})`);
+                    debug(`A fila ${name} foi criada com sucesso (${queueUrl})`);
                     resolve(queueUrl);
                 }
             });
         };
+
         return new Promise((resolve, reject) => {
             // Verifica se a fila já existe
             this.findQueueUrl(name)
                 .then((queueUrl) => {
                     if (queueUrl) {
-                        // debug(`A fila ${name} já existe (${queueUrl})`);
+                        debug(`A fila ${name} já existe (${queueUrl})`);
                         resolve(queueUrl);
                     } else {
                         createQueue(resolve, reject);
