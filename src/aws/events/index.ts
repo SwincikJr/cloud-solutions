@@ -1,4 +1,4 @@
-import { cloneDeep, defaults, defaultsDeep, intersection, keys, pick } from 'lodash';
+import { cloneDeep, defaults, defaultsDeep, intersection, keys, omit, pick } from 'lodash';
 import _debug from 'debug';
 const debug = _debug('solutions:events');
 const log = _debug('solutions:essential:events');
@@ -14,6 +14,11 @@ export const sqsDefaultOptions = defaultsDeep(
     {
         listenInterval: 300,
         processInterval: 300,
+        fifo: false,
+        TopicAttributes: {},
+        SubscribeAttributes: {},
+        QueueAttributes: {},
+        SendMessageAttributes: {},
         params: {
             AttributeNames: ['All'],
             VisibilityTimeout: 120, // em segundos
@@ -45,6 +50,31 @@ export class SQS extends Events implements EventsInterface {
         this.options.loadQueues && (await this.options.loadQueues(this));
         this.listenAll();
         // this._reconnecting = false;
+    }
+
+    setOptions(options?: any): void {
+        super.setOptions(options);
+
+        if (this.options.fifo) {
+            const prefix = this.getPrefix(options);
+
+            this.options.topicName += '.fifo';
+            this.options.QueueAttributes.FifoQueue = 'true';
+            this.options.QueueAttributes.ContentBasedDeduplication = 'true';
+
+            this.options.TopicAttributes.FifoTopic = 'true';
+            this.options.TopicAttributes.ContentBasedDeduplication = 'true';
+            // this.options.TopicAttributes.SqsMessageGroupId = 'abc';
+
+            // this.options.SubscribeAttributes.MessageGroupId = this.options.topicName;
+            this.options.SendMessageAttributes.MessageGroupId = prefix;
+        }
+    }
+
+    formatQueueName(name, options: any = {}) {
+        let _name = super.formatQueueName(name, options);
+        if (this.options.fifo) _name += '.fifo';
+        return _name;
     }
 
     async processReceivedMessages() {
@@ -128,7 +158,7 @@ export class SQS extends Events implements EventsInterface {
 
     buildListenerParams(_name) {
         const params: any = {
-            ...this.options.params,
+            ...omit(this.options.params),
             QueueUrl: this.queueUrls[_name],
         };
 
@@ -184,7 +214,9 @@ export class SQS extends Events implements EventsInterface {
                     const params = {
                         MessageBody: typeof data === 'object' ? JSON.stringify(data) : data + '',
                         QueueUrl: queueUrl,
+                        ...this.options.SendMessageAttributes,
                     };
+                    console.log('>>> _sendToQueue:', name, params);
 
                     const sqs = await this.getInstance();
                     sqs.sendMessage(params, (error, data) => {
@@ -192,7 +224,7 @@ export class SQS extends Events implements EventsInterface {
                             debug('_sendToQueue:', 'Erro ao enviar mensagem para a fila:', error.message);
                             reject(error);
                         } else {
-                            debug('_sendToQueue:', 'Mensagem enviada com sucesso:', data.MessageId);
+                            debug('_sendToQueue:', 'Mensagem enviada com sucesso:', name, data.MessageId);
                             resolve(true);
                         }
                     });
@@ -251,7 +283,9 @@ export class SQS extends Events implements EventsInterface {
                         // debug(`A fila ${name} já existe (${queueUrl})`);
                         resolve(topicArn);
                     } else {
-                        sns.createTopic({ Name: name }, (error, data) => {
+                        const Attributes: any = this.getOptions().TopicAttributes || {};
+
+                        sns.createTopic({ Name: name, Attributes }, (error, data) => {
                             if (error) {
                                 log('Erro ao criar tópico: ', error.message);
                                 reject(error);
@@ -299,8 +333,13 @@ export class SQS extends Events implements EventsInterface {
     async createQueue(name, options: any = {}) {
         const sqs = await this.getInstance();
         const createQueue = (resolve, reject) => {
+            const Attributes = this.getOptions().QueueAttributes || {};
+
+            console.log('\n\n >>>>> Queue Name for create', name, '\n\n');
+            console.log('\n\n >>>>> Queue Attributes', Attributes, '\n\n');
+
             // Se a fila não existe, cria uma nova fila
-            sqs.createQueue({ QueueName: name }, (error, data) => {
+            sqs.createQueue({ QueueName: name, Attributes }, (error, data) => {
                 if (error) {
                     log('createQueue:', error.message);
                     reject(error);
@@ -337,12 +376,15 @@ export class SQS extends Events implements EventsInterface {
     }
 
     async getQueueUrl(name) {
-        if (!this.queueUrls[name]) this.queueUrls[name] = await this.findQueueUrl(name);
+        if (!this.queueUrls[name]) {
+            this.queueUrls[name] = await this.findQueueUrl(name);
+        }
         return this.queueUrls[name];
     }
 
     async findQueueUrl(name) {
         const sqs = await this.getInstance();
+        console.log('\n\n >>>>> Queue Name for find', name, '\n\n');
         return new Promise((resolve, reject) => {
             // Verifica se a fila já existe
             sqs.getQueueUrl({ QueueName: name }, (error, data) => {
@@ -364,7 +406,10 @@ export class SQS extends Events implements EventsInterface {
 
     queueUrlToARN(_queueUrl) {
         if (/https/.test(_queueUrl)) {
-            return _queueUrl.replace(/^(https:\/\/)(\w+)\.([\w-]+)\.([\w.]+)\/(\w+)\/([\w-]+)$/, 'arn:aws:$2:$3:$5:$6');
+            const arn = _queueUrl.replace(/^(https:\/\/)(\w+)\.([\w-]+)\.([\w.]+)\/(\w+)\/([\w-.]+)$/, 'arn:aws:$2:$3:$5:$6');
+            console.log('>>> queueUrlToARN:', arn);
+
+            return arn;
         }
         return _queueUrl;
     }
@@ -372,23 +417,56 @@ export class SQS extends Events implements EventsInterface {
     async queueSubscribe(_queueUrl) {
         const sns = await this.getSNSInstance();
         return new Promise((resolve, reject) => {
-            const queueUrl = this.queueUrlToARN(_queueUrl);
+            const queueArn = this.queueUrlToARN(_queueUrl);
+            console.log('>>> queueArn:', queueArn);
+
             sns.subscribe(
                 {
                     Protocol: 'sqs',
                     TopicArn: this.options.topicArn,
-                    Endpoint: queueUrl,
+                    Endpoint: queueArn,
                 },
                 (error, data) => {
                     if (error) {
                         debug('queueSubscribe:', error.message);
                         reject(error);
                     } else {
-                        // debug(`Fila inscrita no tópico ${this.options.topicArn}`);
+                        debug(`Fila inscrita no tópico ${this.options.topicArn} com subscriptionArn ${data.SubscriptionArn}`);
+
                         resolve(true);
+                        // if (this.options.fifo) {
+                        //     this.queueSubscribeSetMessageGroupId(data.SubscriptionArn)
+                        //         .then(() => resolve(true))
+                        //         .catch((error) => reject(error));
+                        // } else {
+                        //     resolve(true);
+                        // }
                     }
                 },
             );
+        });
+    }
+
+    async queueSubscribeSetMessageGroupId(subscriptionArn) {
+        const sns = await this.getSNSInstance();
+        return new Promise((resolve, reject) => {
+            const setSubscriptionAttributesParams = {
+                SubscriptionArn: subscriptionArn,
+                AttributeName: 'SqsMessageGroupId',
+                AttributeValue: 'abc',
+            };
+            console.log('>>> setSubscriptionAttributesParams:', setSubscriptionAttributesParams);
+
+            sns.setSubscriptionAttributes(setSubscriptionAttributesParams, (err, data) => {
+                if (err) {
+                    console.error('Erro ao definir o atributo SqsMessageGroupId:', err);
+                    reject(err);
+                    return;
+                }
+
+                console.log('Atributo SqsMessageGroupId definido com sucesso.');
+                resolve(true);
+            });
         });
     }
 }
