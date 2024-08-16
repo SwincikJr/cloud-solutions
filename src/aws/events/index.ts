@@ -178,8 +178,14 @@ export class SQS extends Events implements EventsInterface {
     }
 
     async listen(_name, _handler) {
-        const sqs = await this.getInstance();
-        await this._receiveMessages(_name, _handler, sqs);
+        try {
+            const sqs = await this.getInstance();
+            await this._receiveMessages(_name, _handler, sqs);
+        } catch (error) {
+            log('listen:', error.message);
+            await sleep(this.options.listenInterval);
+            return this.listen(_name, _handler);
+        }
     }
 
     _receiveMessages(_name, _handler, instance) {
@@ -425,14 +431,13 @@ export class SQS extends Events implements EventsInterface {
                     } else {
                         debug(`Fila inscrita no tópico ${this.options.topicArn} com subscriptionArn ${data.SubscriptionArn}`);
 
-                        resolve(true);
-                        // if (this.options.fifo) {
-                        //     this.queueSubscribeSetMessageGroupId(data.SubscriptionArn)
-                        //         .then(() => resolve(true))
-                        //         .catch((error) => reject(error));
-                        // } else {
-                        //     resolve(true);
-                        // }
+                        if (this.options.fifo) {
+                            this.queueSubscribeSetMessageGroupId(data.SubscriptionArn)
+                                .then(() => resolve(true))
+                                .catch((error) => reject(error));
+                        } else {
+                            resolve(true);
+                        }
                     }
                 },
             );
