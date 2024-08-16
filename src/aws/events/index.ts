@@ -216,7 +216,6 @@ export class SQS extends Events implements EventsInterface {
                         QueueUrl: queueUrl,
                         ...this.options.SendMessageAttributes,
                     };
-                    console.log('>>> _sendToQueue:', name, params);
 
                     const sqs = await this.getInstance();
                     sqs.sendMessage(params, (error, data) => {
@@ -335,9 +334,6 @@ export class SQS extends Events implements EventsInterface {
         const createQueue = (resolve, reject) => {
             const Attributes = this.getOptions().QueueAttributes || {};
 
-            console.log('\n\n >>>>> Queue Name for create', name, '\n\n');
-            console.log('\n\n >>>>> Queue Attributes', Attributes, '\n\n');
-
             // Se a fila não existe, cria uma nova fila
             sqs.createQueue({ QueueName: name, Attributes }, (error, data) => {
                 if (error) {
@@ -384,7 +380,6 @@ export class SQS extends Events implements EventsInterface {
 
     async findQueueUrl(name) {
         const sqs = await this.getInstance();
-        console.log('\n\n >>>>> Queue Name for find', name, '\n\n');
         return new Promise((resolve, reject) => {
             // Verifica se a fila já existe
             sqs.getQueueUrl({ QueueName: name }, (error, data) => {
@@ -407,8 +402,6 @@ export class SQS extends Events implements EventsInterface {
     queueUrlToARN(_queueUrl) {
         if (/https/.test(_queueUrl)) {
             const arn = _queueUrl.replace(/^(https:\/\/)(\w+)\.([\w-]+)\.([\w.]+)\/(\w+)\/([\w-.]+)$/, 'arn:aws:$2:$3:$5:$6');
-            console.log('>>> queueUrlToARN:', arn);
-
             return arn;
         }
         return _queueUrl;
@@ -418,7 +411,6 @@ export class SQS extends Events implements EventsInterface {
         const sns = await this.getSNSInstance();
         return new Promise((resolve, reject) => {
             const queueArn = this.queueUrlToARN(_queueUrl);
-            console.log('>>> queueArn:', queueArn);
 
             sns.subscribe(
                 {
@@ -455,16 +447,12 @@ export class SQS extends Events implements EventsInterface {
                 AttributeName: 'SqsMessageGroupId',
                 AttributeValue: 'abc',
             };
-            console.log('>>> setSubscriptionAttributesParams:', setSubscriptionAttributesParams);
-
             sns.setSubscriptionAttributes(setSubscriptionAttributesParams, (err, data) => {
                 if (err) {
                     console.error('Erro ao definir o atributo SqsMessageGroupId:', err);
                     reject(err);
                     return;
                 }
-
-                console.log('Atributo SqsMessageGroupId definido com sucesso.');
                 resolve(true);
             });
         });
