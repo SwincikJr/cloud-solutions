@@ -60,7 +60,7 @@ describe('Sftp Storage', () => {
     let variables: any;
 
     beforeAll(async () => {
-        storage = await mainInstantiate({ stayConnected: true });
+        storage = await mainInstantiate();
         variables = getVariables(storage);
     }, globalTimeout);
 
@@ -94,7 +94,7 @@ describe('Sftp Storage', () => {
 
     describe('specific method: createInstance', () => {
         it(
-            'should fail to connect',
+            'should connect successfully',
             async () => {
                 const instance = await createInstance.shouldBeInstanceOf(storage, SftpClient, {
                     host: process.env.STORAGE_C_HOST,
@@ -102,7 +102,7 @@ describe('Sftp Storage', () => {
                     user: process.env.STORAGE_C_USER,
                     pass: process.env.STORAGE_C_PASS,
                 });
-                storage._closeInstance(instance);
+                await storage._closeInstance(instance);
             },
             globalTimeout,
         );
@@ -115,6 +115,7 @@ describe('Sftp Storage', () => {
                     port: process.env.STORAGE_B_PORT,
                     user: process.env.STORAGE_B_USER,
                     pass: process.env.STORAGE_B_PASS,
+                    privateKey: process.env.STORAGE_B_PRIVATEKEY,
                 });
             },
             globalTimeout,
@@ -202,7 +203,7 @@ describe('Sftp Storage', () => {
         it(
             'should send content to a new directory with stayConnected = false',
             async () => {
-                const storage_ = await mainInstantiate();
+                const storage_ = await mainInstantiate({ stayConnected: false });
                 const { mockDir, mockFileStreamPath } = getVariables(storage);
                 const path_ = mockFileStreamPath.replace(mockDir, [mockDir, 'xxx'].join('/'));
                 await sendStream.shouldSendLongContent(storage_, path_);

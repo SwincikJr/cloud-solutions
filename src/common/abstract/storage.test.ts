@@ -244,14 +244,26 @@ deleteFile.shouldDo = async (storage) => {
 };
 
 const deleteDirectory: any = {};
-deleteDirectory.shouldDeleteRecursively = async (storage) => {
+deleteDirectory.shouldDeleteRecursively = async (storage, testForSftp = false) => {
     if (!cleanAfter) return;
 
     expect.assertions(1);
+    // expect.assertions(testForSftp ? 2 : 1);
     const { mockDir } = getVariables(storage);
     const _path = mockDir + '/';
+    const contentListBefore = await storage.readDirectory(mockDir);
     await storage.deleteDirectory(_path);
-    expect(await storage.checkPathExists(mockDir)).toBeFalsy();
+    const hasContent = await storage.checkPathExists(mockDir);
+    const contentListAfter = await storage.readDirectory(mockDir);
+    // console.log('>>>>>>>>>>>>>>>. contentLength', _path, contentListBefore, contentListAfter, hasContent);
+
+    // XXX: temporary fix for sftp available
+    // if (testForSftp) {
+    //     expect(contentListBefore.length).toBeGreaterThan(4);
+    //     expect(contentListAfter.length).toBeLessThanOrEqual(1);
+    // } else {
+    expect(hasContent).toBeFalsy();
+    // }
 };
 deleteDirectory.shouldOmitDeletionOfUnexistentDirectory = async (storage) => {
     if (!cleanAfter) return;

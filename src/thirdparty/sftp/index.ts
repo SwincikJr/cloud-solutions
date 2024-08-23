@@ -16,7 +16,7 @@ export class Sftp extends Storage implements StorageInterface {
     protected defaultOptions: any = {
         basePath: '',
         baseDir: '',
-        stayConnected: false,
+        stayConnected: true,
         privateKeyStartsWith: '-----BEGIN RSA PRIVATE KEY-----',
         privateKeyEndsWith: '-----END RSA PRIVATE KEY-----',
     };
@@ -42,6 +42,7 @@ export class Sftp extends Storage implements StorageInterface {
 
     setOptions(options: any = {}) {
         bind(Fs.prototype.setOptions, this)(options);
+        // aliases for username and password
         if (this.providerOptions.user) this.providerOptions.username = this.providerOptions.user;
         if (this.providerOptions.pass) this.providerOptions.password = this.providerOptions.pass;
     }
