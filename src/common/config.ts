@@ -5,6 +5,7 @@ import { RabbitMQ } from '../thirdparty/rabbitmq/index';
 import { Sftp } from '../thirdparty/sftp';
 import { SolutionEnum } from './types/solution.enum';
 import { ProviderEnum } from './types/provider.enum';
+import { Ftp } from '../thirdparty/ftp';
 
 const adapters: any = {};
 adapters[SolutionEnum.CLOUD_PROVIDER] = {};
@@ -57,5 +58,6 @@ adapters[SolutionEnum.EVENTS][Local.SolutionsEnum.EVENTS] = Local.EventsAdapter;
 // THIRDPARTY
 adapters[SolutionEnum.EVENTS][RabbitMQ.getName()] = RabbitMQ;
 adapters[SolutionEnum.STORAGE][Sftp.getName()] = Sftp;
+adapters[SolutionEnum.STORAGE][Ftp.getName()] = Ftp;
 
 export { adapters };

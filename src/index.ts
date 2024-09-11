@@ -17,12 +17,14 @@ import { Events } from './common/abstract/events';
 import { Secrets } from './common/abstract/secrets';
 import { Storage } from './common/abstract/storage';
 import { Sftp } from './thirdparty/sftp';
+import { Ftp } from './thirdparty/ftp';
 
 const Adapters = {
     Aws,
     Local,
     RabbitMQ,
     Sftp,
+    Ftp,
 };
 
 const Abstracts = {
