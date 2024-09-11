@@ -229,7 +229,7 @@ getFileInfo.shouldReturnFileInfo = async (storage) => {
 };
 getFileInfo.shouldThrowErrorForUnexistentFile = async (storage) => {
     expect.assertions(1);
-    await expect(storage.getFileInfo('unexistent')).rejects.toThrow();
+    await expect(() => storage.getFileInfo('unexistent')).rejects.toThrow();
 };
 
 const cleanAfter = true;
@@ -240,7 +240,9 @@ deleteFile.shouldDo = async (storage) => {
     expect.assertions(1);
     const { mockFilePath } = getVariables(storage);
     await storage.deleteFile(mockFilePath);
-    await expect(storage.readContent(mockFilePath)).rejects.toThrow();
+    // this timer is to give aws some air to finish delete process
+    await sleep(500);
+    await expect(() => storage.readContent(mockFilePath)).rejects.toThrow();
 };
 
 const deleteDirectory: any = {};

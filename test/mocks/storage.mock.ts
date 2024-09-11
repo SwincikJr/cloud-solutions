@@ -3,6 +3,8 @@ export const storageMock = function (cloudName) {
     const mockDir = `cloud-${cloudName}-testdir-${timestamp}`;
 
     const mockFilePath = `cloud-${cloudName}-${timestamp}.txt`;
+    const mockCopyFilePath = `copy-${cloudName}-${timestamp}.txt`;
+    const mockCopyBFilePath = `copyb-${cloudName}-${timestamp}.txt`;
     const mockFileStreamPath = [mockDir, `stream-${timestamp}.txt`].join('/');
     const mockFileStreamShortPath = [mockDir, `stream-short-${timestamp}.txt`].join('/');
     const mockFileStreamLongPath = [mockDir, `stream-long-${timestamp}.txt`].join('/');
@@ -52,6 +54,8 @@ stream line 2`;
     return {
         mockDir,
         mockFilePath,
+        mockCopyFilePath,
+        mockCopyBFilePath,
         mockFileStreamPath,
         mockFileStreamShortPath,
         mockFileStreamLongPath,

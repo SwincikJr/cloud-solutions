@@ -15,6 +15,7 @@ export const sqsDefaultOptions = defaultsDeep(
         listenInterval: 300,
         processInterval: 300,
         fifo: false,
+        deleteAllQueues: false,
         TopicAttributes: {},
         SubscribeAttributes: {},
         QueueAttributes: {},
@@ -48,6 +49,8 @@ export class SQS extends Events implements EventsInterface {
 
         this.options.topicArn = await this.createSNSTopic(this.options.topicName);
         this.options.loadQueues && (await this.options.loadQueues(this));
+        if (this.getOptions().deleteAllQueues) throw new Error('All queues deleted');
+
         this.listenAll();
         // this._reconnecting = false;
     }
@@ -146,8 +149,13 @@ export class SQS extends Events implements EventsInterface {
 
     async loadQueue(_name, _handler) {
         const names = typeof _name === 'string' ? [_name] : _name;
+        const deleteAllQueues = this.getOptions().deleteAllQueues;
         for (const _name of names) {
             const name = this.formatQueueName(_name);
+            if (deleteAllQueues) {
+                await this.deleteQueue(name);
+                continue;
+            }
             this.queueUrls[name] = await this.createQueue(name);
             debug('loadQueue:queueUrl', name, this.queueUrls[name]);
 
@@ -191,6 +199,7 @@ export class SQS extends Events implements EventsInterface {
     _receiveMessages(_name, _handler, instance) {
         return new Promise((resolve, reject) => {
             const params = this.buildListenerParams(_name);
+
             instance.receiveMessage(params, (error, data) => {
                 if (error) {
                     log('loadQueue:receiveMessage', error.message);
@@ -335,9 +344,9 @@ export class SQS extends Events implements EventsInterface {
         });
     }
 
-    async createQueue(name, options: any = {}) {
+    async _createQueue(name) {
         const sqs = await this.getInstance();
-        const createQueue = (resolve, reject) => {
+        return new Promise((resolve, reject) => {
             const Attributes = this.getOptions().QueueAttributes || {};
 
             // Se a fila não existe, cria uma nova fila
@@ -352,24 +361,51 @@ export class SQS extends Events implements EventsInterface {
                     resolve(queueUrl);
                 }
             });
-        };
-
-        return new Promise((resolve, reject) => {
-            // Verifica se a fila já existe
-            this.findQueueUrl(name)
-                .then((queueUrl) => {
-                    if (queueUrl) {
-                        //
-                        debug(`A fila ${name} já existe (${queueUrl})`);
-                        resolve(queueUrl);
-                    } else {
-                        createQueue(resolve, reject);
-                    }
-                })
-                .catch(() => {
-                    createQueue(resolve, reject);
-                });
         });
+    }
+
+    async deleteQueue(name) {
+        const sqs = await this.getInstance();
+        try {
+            const queueUrl = await this.findQueueUrl(name);
+            return new Promise((resolve, reject) => {
+                sqs.deleteQueue({ QueueUrl: queueUrl }, (error, data) => {
+                    if (error) {
+                        log(`falha ao excluir a fila ${name}: ${error.message}`);
+                        reject(error);
+                    } else {
+                        log(`A fila ${name} foi deletada com sucesso. data? ${JSON.stringify(data)}. error? ${JSON.stringify(error)}`);
+                        resolve(true);
+                    }
+                });
+            });
+        } catch (error) {
+            log(`A fila ${name} nao pode ser excluida: ${error.message}`);
+        }
+    }
+
+    async createQueue(name, options: any = {}) {
+        try {
+            return await this.findQueueUrl(name);
+        } catch (error) {
+            return await this._createQueue(name);
+        }
+        // return new Promise((resolve, reject) => {
+        //     // Verifica se a fila já existe
+        //     this.findQueueUrl(name)
+        //         .then((queueUrl) => {
+        //             if (queueUrl) {
+        //                 //
+        //                 debug(`A fila ${name} já existe (${queueUrl})`);
+        //                 resolve(queueUrl);
+        //             } else {
+        //                 createQueue(resolve, reject);
+        //             }
+        //         })
+        //         .catch(() => {
+        //             createQueue(resolve, reject);
+        //         });
+        // });
     }
 
     async createQueueOnFail(name) {

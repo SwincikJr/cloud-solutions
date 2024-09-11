@@ -162,6 +162,36 @@ describe('Aws Storage', () => {
         });
     });
 
+    describe('specific method: copyFile', () => {
+        it('should make a copy', async () => {
+            expect.assertions(1);
+            const { mockFilePath, mockCopyFilePath } = getVariables(storage);
+            await expect(() => storage.copyFile(mockFilePath, mockCopyFilePath, { checkSize: false })).not.toThrow();
+        });
+    });
+
+    describe('specific method: compareSize', () => {
+        it('should compare source with destination size', async () => {
+            expect.assertions(1);
+            const { mockFilePath, mockCopyFilePath } = getVariables(storage);
+            await expect(() => storage.compareSize(mockFilePath, mockCopyFilePath)).toBeTruthy();
+        });
+    });
+
+    describe('specific method: copyFile + move', () => {
+        it('should copy to and delete source ', async () => {
+            expect.assertions(3);
+            const { mockCopyFilePath, mockCopyBFilePath } = getVariables(storage);
+            await expect(() => storage.copyFile(mockCopyFilePath, mockCopyBFilePath, { clear: true, move: true })).not.toThrow();
+            await sleep(500);
+            await expect(() => storage.getFileInfo(mockCopyFilePath)).rejects.toThrow();
+
+            await storage.deleteFile(mockCopyBFilePath);
+            await sleep(500);
+            await expect(() => storage.readContent(mockCopyBFilePath)).rejects.toThrow();
+        });
+    });
+
     describe('common method: deleteFile', () => {
         it('should do', async () => {
             await deleteFile.shouldDo(storage);

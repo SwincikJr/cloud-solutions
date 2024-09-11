@@ -1,5 +1,6 @@
 import { defaultsDeep, keys, omit } from 'lodash';
 import { Solution } from './solution';
+import { CompareSizeOptionsInterface, StorageInterface } from '../interfaces/storage.interface';
 
 export const storageInternalOptions = ['getRawStream'];
 
@@ -56,6 +57,15 @@ export abstract class Storage extends Solution {
         return contentLength > 0;
     }
 
+    async compareSize(pathA, pathB, options: Partial<CompareSizeOptionsInterface> = {}): Promise<boolean> {
+        const storageA = (options.storageA || this) as StorageInterface;
+        const storageB = (options.storageB || this) as StorageInterface;
+
+        const FileAInfo = await storageA.getFileInfo(pathA);
+        const fileBInfo = await storageB.getFileInfo(pathB);
+        return FileAInfo.contentLength === fileBInfo.contentLength;
+    }
+
     // TODO: alias [to be removed]
     async checkDirectoryContentLength(directoryPath = '', options: any = {}) {
         return await this.checkPathExists(directoryPath, options);
@@ -63,5 +73,9 @@ export abstract class Storage extends Solution {
 
     async checkDirectoryExists(directoryPath = '', options: any = {}) {
         return await this.checkPathExists(directoryPath, options);
+    }
+
+    async copyFile(pathFrom, pathTo, options: any = {}): Promise<void> {
+        throw new Error('Method not implemented');
     }
 }
